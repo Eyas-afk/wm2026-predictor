@@ -109,7 +109,7 @@ def compute_elo_ratings(df: pd.DataFrame) -> tuple[dict, pd.DataFrame]:
 
 
 if __name__ == "__main__":
-    df = pd.read_csv("data/results.csv")
+    df = pd.read_csv("C:\\Users\\ghbar\\Downloads\\wm2026-predictor\\wm2026-predictor\\data\\results.csv")
     df["date"] = pd.to_datetime(df["date"])
 
     # Nur Spiele vor WM-2026-Start verwenden (kein Data Leakage!)
@@ -126,6 +126,6 @@ if __name__ == "__main__":
         print(f"{i:2d}. {team:20s} {rating:.1f}")
 
     # Speichern für die nächsten Schritte
-    history.to_csv("data/elo_history.csv", index=False)
-    pd.Series(final_ratings, name="elo").to_csv("data/final_elo_ratings.csv")
+    history.to_csv("C:\\Users\\ghbar\\Downloads\\wm2026-predictor\\wm2026-predictor\\data\\elo_history.csv", index=False)
+    pd.Series(final_ratings, name="elo").to_csv("C:\\Users\\ghbar\\Downloads\\wm2026-predictor\\wm2026-predictor\\data\\final_elo_ratings.csv")
     print("\n✅ Gespeichert: data/elo_history.csv, data/final_elo_ratings.csv")

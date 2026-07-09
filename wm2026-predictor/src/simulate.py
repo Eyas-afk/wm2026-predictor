@@ -35,7 +35,7 @@ GROUPS = {
 
 
 def load_elo():
-    elo = pd.read_csv("data/final_elo_ratings.csv", index_col=0).iloc[:, 0].to_dict()
+    elo = pd.read_csv("C:\\Users\\ghbar\\Downloads\\wm2026-predictor\\wm2026-predictor\\data\\final_elo_ratings.csv", index_col=0).iloc[:, 0].to_dict()
     return elo
 
 
@@ -136,7 +136,7 @@ def run_single_tournament(prob_table):
 
 
 def main():
-    model = joblib.load("data/match_model.pkl")
+    model = joblib.load("C:\\Users\\ghbar\\Downloads\\wm2026-predictor\\wm2026-predictor\\data\\match_model.pkl")
     elo = load_elo()
 
     all_teams = [t for teams in GROUPS.values() for t in teams]
@@ -170,7 +170,7 @@ def main():
     print("\n=== TOP 15 WM-2026-FAVORITEN (Modell-Vorhersage, Stand 10. Juni 2026) ===")
     print(result_df.head(15).to_string())
 
-    result_df.to_csv("results/wm2026_predictions.csv", index=False)
+    result_df.to_csv("C:\\Users\\ghbar\\Downloads\\wm2026-predictor\\wm2026-predictor\\results\\wm2026_predictions.csv", index=False)
     print("\n✅ Gespeichert: results/wm2026_predictions.csv")
 
 

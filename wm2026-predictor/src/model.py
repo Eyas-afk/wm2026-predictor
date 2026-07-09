@@ -7,10 +7,14 @@ Modell: Gradient Boosting Classifier (XGBoost) mit 3 Klassen.
 
 import pandas as pd
 import numpy as np
+from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, log_loss, classification_report
 from sklearn.ensemble import GradientBoostingClassifier
 import joblib
+
+# Get project root (two levels up from this script)
+PROJECT_ROOT = Path(__file__).parent.parent
 
 RESULT_MAP = {"H": 0, "D": 1, "A": 2}  # Heimsieg, Draw, Auswärtssieg
 
@@ -37,7 +41,7 @@ def build_features(history: pd.DataFrame) -> pd.DataFrame:
 
 
 def main():
-    history = pd.read_csv("data/elo_history.csv")
+    history = pd.read_csv(PROJECT_ROOT / "data" / "elo_history.csv")
     df = build_features(history)
 
     features = ["elo_diff", "home_elo_pre", "away_elo_pre", "neutral"]
@@ -75,7 +79,7 @@ def main():
     for feat, imp in sorted(zip(features, model.feature_importances_), key=lambda x: -x[1]):
         print(f"  {feat:15s} {imp:.3f}")
 
-    joblib.dump(model, "data/match_model.pkl")
+    joblib.dump(model, PROJECT_ROOT / "data" / "match_model.pkl")
     print("\n✅ Modell gespeichert: data/match_model.pkl")
 
 
