@@ -13,6 +13,9 @@ import numpy as np
 import joblib
 import json
 from collections import defaultdict
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).parent.parent
 
 # Anzahl kompletter Turnier-Durchläufe. Je höher, desto stabiler/genauer die
 # geschätzten Wahrscheinlichkeiten (Monte-Carlo-Prinzip: viele Wiederholungen
@@ -44,10 +47,11 @@ GROUPS = {
 }
 
 
+
 def load_elo():
     """Lädt die finalen ELO-Ratings (Stand 10. Juni 2026) aus elo.py als
     einfaches {team_name: rating}-Dictionary für schnellen Zugriff."""
-    elo = pd.read_csv("C:\\Users\\ghbar\\Downloads\\wm2026-predictor\\wm2026-predictor\\data\\final_elo_ratings.csv", index_col=0).iloc[:, 0].to_dict()
+    elo = pd.read_csv(PROJECT_ROOT / "data" / "final_elo_ratings.csv", index_col=0).iloc[:, 0].to_dict()
     return elo
 
 
@@ -189,4 +193,78 @@ def run_single_tournament(prob_table):
     # treffen. Hier wird stattdessen zufällig gemischt - technisch nicht
     # 1:1 wie das echte Turnier, aber für den Zweck dieses Lernprojekts
     # (Grundprinzip von Monte-Carlo-Turniersimulation zeigen) ausreichend.
-    # Mögliche
+    # Mögliche Erweiterung: echte Bracket-Logik nachbauen.
+    bracket = list(round_of_32)
+    RNG.shuffle(bracket)
+
+    # Protokolliert, welche Teams in welcher Runde noch dabei waren -
+    # wird später für "reach_final_pct" etc. in main() ausgewertet.
+    round_name_progress = defaultdict(list)
+    current_round = bracket
+    round_names = ["R32", "R16", "QF", "SF", "F"]
+    for rname in round_names:
+        round_name_progress[rname] = list(current_round)
+        next_round = []
+        # Paarweise durch die aktuelle Runde: Team 0 vs Team 1, Team 2 vs
+        # Team 3, usw. Jedes Paar erzeugt genau einen Sieger für die
+        # nächste Runde.
+        for i in range(0, len(current_round), 2):
+            winner = simulate_match_score(prob_table, current_round[i], current_round[i + 1])
+            next_round.append(winner)
+        current_round = next_round
+
+    # Nach der letzten Runde ("F" = Finale) bleibt nur noch 1 Team übrig.
+    champion = current_round[0]
+    return champion, round_name_progress
+
+
+def main():
+    model = joblib.load(PROJECT_ROOT / "data" / "match_model.pkl")
+    elo = load_elo()
+
+    all_teams = [t for teams in GROUPS.values() for t in teams]
+    print(f"Berechne Wahrscheinlichkeiten für alle {len(all_teams)} Teams (einmalig)...")
+    # Performance-kritischer Schritt: einmal berechnen, danach nur noch
+    # nachschlagen (siehe Docstring von precompute_all_probs).
+    prob_table = precompute_all_probs(model, elo, all_teams)
+
+    win_counts = defaultdict(int)
+    # Verschachteltes defaultdict: stage_reached["Spain"]["QF"] zählt, in
+    # wie vielen der 10.000 Simulationen Spanien das Viertelfinale erreicht hat.
+    stage_reached = defaultdict(lambda: defaultdict(int))
+
+    print(f"Simuliere {N_SIMULATIONS:,} WM-2026-Turniere...")
+    for sim in range(N_SIMULATIONS):
+        champion, progress = run_single_tournament(prob_table)
+        win_counts[champion] += 1
+        for stage, teams in progress.items():
+            for t in teams:
+                stage_reached[t][stage] += 1
+
+    # Ergebnisse in eine übersichtliche Tabelle umwandeln: für jedes Team,
+    # das irgendwann in mind. einer Simulation vorkam, berechnen wir den
+    # prozentualen Anteil der Simulationen, in denen es Champion wurde bzw.
+    # eine bestimmte Runde erreicht hat.
+    results = []
+    for team in win_counts.keys() | stage_reached.keys():
+        results.append({
+            "team": team,
+            "win_pct": 100 * win_counts.get(team, 0) / N_SIMULATIONS,
+            "reach_final_pct": 100 * stage_reached[team].get("F", 0) / N_SIMULATIONS,
+            "reach_sf_pct": 100 * stage_reached[team].get("SF", 0) / N_SIMULATIONS,
+            "reach_qf_pct": 100 * stage_reached[team].get("QF", 0) / N_SIMULATIONS,
+        })
+
+    result_df = pd.DataFrame(results).sort_values("win_pct", ascending=False).reset_index(drop=True)
+    result_df.index += 1  # Rang 1 statt Index 0, für lesbarere Ausgabe
+
+    print("\n=== TOP 15 WM-2026-FAVORITEN (Modell-Vorhersage, Stand 10. Juni 2026) ===")
+    print(result_df.head(15).to_string())
+
+    # Für validate.py und die spätere README-Tabelle persistieren.
+    result_df.to_csv(PROJECT_ROOT / "results" / "wm2026_predictions.csv", index=False)
+    print("\n✅ Gespeichert: results/wm2026_predictions.csv")
+
+
+if __name__ == "__main__":
+    main()

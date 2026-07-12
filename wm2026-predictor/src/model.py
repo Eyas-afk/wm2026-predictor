@@ -13,6 +13,8 @@ from sklearn.metrics import accuracy_score, log_loss, classification_report
 from sklearn.ensemble import GradientBoostingClassifier
 import joblib
 
+
+
 # Projekt-Wurzelverzeichnis ermitteln (zwei Ebenen über diesem Skript,
 # src/model.py -> src/ -> Projekt-Root). So funktioniert das Skript auf
 # jedem Rechner, unabhängig davon wo das Projekt liegt - keine
